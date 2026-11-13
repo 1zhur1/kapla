@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capabilities of the island window",
+  "windows": ["island"],
+  "permissions": [
+    "core:default",
+    "global-shortcut:default"
+  ]
+}

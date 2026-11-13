@@ -1,0 +1,237 @@
+/* ───────────── Kapla Liquid Glass tokens ─────────────
+   Полупрозрачное дымчатое стекло + мягкие блики граней + живой акцент.
+   Цвет акцента подменяется цветом обложки, когда играет музыка. */
+:root {
+  --ink: rgba(11, 13, 20, 0.72);
+  --ink-2: rgba(255, 255, 255, 0.07);
+  --ink-3: rgba(255, 255, 255, 0.12);
+  --ink-4: rgba(255, 255, 255, 0.20);
+  --glass-bg: linear-gradient(155deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%);
+  --glass-bg-strong: linear-gradient(155deg, rgba(255, 255, 255, 0.17) 0%, rgba(255, 255, 255, 0.06) 100%);
+  --glass-blur: blur(22px) saturate(155%);
+  --line: rgba(255, 255, 255, 0.14);
+  --line-2: rgba(255, 255, 255, 0.28);
+  --text: #f5f7fc;
+  --muted: rgba(226, 232, 246, 0.68);
+  --faint: rgba(226, 232, 246, 0.42);
+  --accent: #ff7a3d;
+  --accent-rgb: 255, 122, 61;
+  --ok: #7ee8a2;
+  --warn: #ffd166;
+  --danger: #ff6b6b;
+
+  --font: "Onest Variable", "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono Variable", "Cascadia Mono", monospace;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --surface-sheen:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 28px rgba(4, 6, 12, 0.26);
+  --r-s: 11px;
+  --r-m: 16px;
+  --r-l: 22px;
+
+  color-scheme: dark;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "cv11";
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 120ms var(--ease), opacity 140ms var(--ease);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@keyframes kaplaFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+@keyframes kaplaFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes kaplaPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes kaplaPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.22);
+    opacity: 1;
+  }
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), 0.75);
+  outline-offset: 2px;
+}
+
+input {
+  font: inherit;
+  color: inherit;
+}
+
+svg.i {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.85;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 180ms var(--ease-spring);
+}
+
+button:hover svg.i .duo {
+  opacity: 0.42;
+}
+
+svg.i.fill {
+  fill: currentColor;
+  stroke: none;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.34);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ───────── Строгие микровзаимодействия ───────── */
+.content .tab-view :is(.item, .ccard, .tile, .card:not(.stage), .pchip, .chip, .qbtn) {
+  transition:
+    translate 260ms var(--ease),
+    scale 240ms var(--ease),
+    box-shadow 240ms var(--ease),
+    border-color 220ms var(--ease),
+    background 200ms var(--ease),
+    transform 200ms var(--ease),
+    opacity 180ms var(--ease);
+}
+.content .tab-view :is(.item, .ccard, .tile, .card:not(.stage)):hover {
+  translate: 0 -1px;
+  border-color: rgba(255, 255, 255, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 24px -8px rgba(0, 0, 0, 0.45);
+}
+.content .tab-view :is(.pchip, .chip, .qbtn):hover {
+  scale: 1.025;
+}
+.content .tab-view :is(.pchip, .chip, .qbtn):active {
+  scale: 0.97;
+}
+
+/* Каскадное появление элементов списков и плиток при открытии раздела */
+.content .tab-view :is(.list > .item, .grid > .card, .containers > .ccard, .mini-grid > .tile) {
+  animation: kaplaRise 360ms var(--ease) both;
+}
+.content .tab-view :is(.list > .item, .grid > .card, .containers > .ccard, .mini-grid > .tile):nth-child(2) { animation-delay: 28ms; }
+.content .tab-view :is(.list > .item, .grid > .card, .containers > .ccard, .mini-grid > .tile):nth-child(3) { animation-delay: 56ms; }
+.content .tab-view :is(.list > .item, .grid > .card, .containers > .ccard, .mini-grid > .tile):nth-child(4) { animation-delay: 84ms; }
+.content .tab-view :is(.list > .item, .grid > .card, .containers > .ccard, .mini-grid > .tile):nth-child(5) { animation-delay: 112ms; }
+.content .tab-view :is(.list > .item, .grid > .card, .containers > .ccard, .mini-grid > .tile):nth-child(6) { animation-delay: 140ms; }
+.content .tab-view :is(.list > .item, .grid > .card, .containers > .ccard, .mini-grid > .tile):nth-child(7) { animation-delay: 168ms; }
+.content .tab-view :is(.list > .item, .grid > .card, .containers > .ccard, .mini-grid > .tile):nth-child(n + 8) { animation-delay: 196ms; }
+
+@keyframes kaplaRise {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+    scale: 0.985;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+/* Поля ввода — чёткий фокус */
+.content .tab-view :is(input, textarea):focus {
+  border-color: rgba(var(--accent-rgb), 0.58) !important;
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.16) !important;
+}
+
+/* Выделение текста */
+::selection {
+  background: rgba(var(--accent-rgb), 0.35);
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content .tab-view * {
+    animation-duration: 1ms !important;
+  }
+}
