@@ -12,8 +12,8 @@
   let ctx: CanvasRenderingContext2D | null = null;
   let origCanvas: HTMLCanvasElement | null = null;
 
-  let tool = $state<Tool>("arrow");
-  let color = $state("#ff5f52");
+  let tool = $state<Tool>(ui.editorTool ?? "arrow");
+  let color = $state("#ff7a3d");
   let size = $state(4);
   let loading = $state(true);
   let busy = $state(false);
@@ -702,18 +702,20 @@
   }
   .ed-tools {
     display: flex;
-    gap: 3px;
-    padding: 3px;
-    border-radius: 11px;
-    background: var(--ink-2);
-    border: 1px solid var(--line);
+    gap: 4px;
+    padding: 4px;
+    border-radius: 12px;
+    background: var(--glass-bg);
+    border: 1px solid rgba(var(--accent-rgb), 0.35);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 18px rgba(var(--accent-rgb), 0.1);
   }
   .ttool {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    height: 26px;
-    padding: 0 8px;
+    height: 27px;
+    padding: 0 9px;
     border-radius: 8px;
     font-size: 11.5px;
     color: var(--muted);
@@ -721,11 +723,22 @@
   }
   .ttool:hover {
     color: var(--text);
+    background: rgba(255, 255, 255, 0.06);
   }
   .ttool.active {
-    background: var(--ink-3);
-    color: var(--text);
-    box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.45);
+    background: rgba(var(--accent-rgb), 0.22);
+    color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.55);
+  }
+  .ttool.active::after {
+    content: "";
+    position: absolute;
+    left: 22%;
+    right: 22%;
+    bottom: 2px;
+    height: 2px;
+    border-radius: 2px;
+    background: rgb(var(--accent-rgb));
   }
   .blur-ic {
     font-size: 12px;

@@ -60,6 +60,7 @@ export const ui = $state({
   } as Sys,
   clips: [] as Clip[],
   editorClip: null as Clip | null,
+  editorTool: "arrow" as "arrow" | "rect" | "brush" | "marker" | "blur" | "text" | "crop",
   editorSaveDir: loadJson<string>("kapla.editorSaveDir", ""),
   recentShot: null as { id: number; preview: string; text: string; at: number } | null,
   shelf: loadJson<ShelfItem[]>("kapla.shelf", []),
@@ -102,7 +103,11 @@ export function saveEditorDir(dir: string) {
   } catch {}
 }
 
-export function openImageEditor(clip: Clip) {
+export function openImageEditor(
+  clip: Clip,
+  tool: "arrow" | "rect" | "brush" | "marker" | "blur" | "text" | "crop" = "arrow",
+) {
+  ui.editorTool = tool;
   ui.editorClip = clip;
   ui.open = true;
   ui.pinned = true;

@@ -121,14 +121,16 @@
     <button class="act" onclick={() => run((s) => encodeURIComponent(s))}>URL</button>
   </div>
 
-  <textarea
-    bind:value={text}
-    placeholder="Вставь или набери текст — либо нажми «Из буфера» ниже…"
-    onpointerdown={onPointerDown}
-    onfocus={onFocus}
-    onblur={onBlur}
-    onkeydown={onKey}
-  ></textarea>
+  <div class="editor-card">
+    <textarea
+      bind:value={text}
+      placeholder="Вставь или набери текст — либо нажми «Из буфера» ниже…"
+      onpointerdown={onPointerDown}
+      onfocus={onFocus}
+      onblur={onBlur}
+      onkeydown={onKey}
+    ></textarea>
+  </div>
 
   <div class="foot">
     <span class="mono cnt">{text.length} симв. · {wordCount} сл. · {lineCount} стр.</span>
@@ -144,81 +146,106 @@
   .wrap {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
     height: 100%;
+    min-height: 0;
   }
   .bar {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 5px;
+    flex: none;
   }
   .act {
-    padding: 5px 9px;
-    border-radius: 8px;
-    background: var(--ink-2);
+    height: 26px;
+    padding: 0 11px;
+    border-radius: 999px;
+    background: var(--glass-bg);
     border: 1px solid var(--line);
-    font-size: 11.5px;
+    font-size: 11px;
+    font-weight: 500;
     color: var(--muted);
-    transition: all 140ms var(--ease);
+    transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
   }
   .act:hover {
-    color: var(--text);
-    background: var(--ink-3);
+    color: var(--fg);
+    background: var(--glass-bg-strong);
     border-color: rgba(var(--accent-rgb), 0.45);
+  }
+  .editor-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    border-radius: var(--r-m);
+    background: rgba(20, 22, 28, 0.72);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: border-color var(--t-fast), box-shadow var(--t-fast);
+  }
+  .editor-card:focus-within {
+    border-color: rgba(var(--accent-rgb), 0.5);
+    box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.14);
   }
   textarea {
     flex: 1;
     width: 100%;
+    height: 100%;
     resize: none;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--line);
-    box-shadow: var(--surface-sheen);
-    border-radius: var(--r-m);
-    padding: 10px 12px;
-    color: var(--text);
+    background: transparent;
+    border: 0;
+    padding: 12px 14px;
+    color: var(--fg);
     font: inherit;
     font-size: 12.5px;
-    line-height: 1.5;
+    line-height: 1.55;
     outline: none;
   }
-  textarea:focus {
-    border-color: rgba(var(--accent-rgb), 0.55);
+  textarea::placeholder {
+    color: var(--muted);
   }
   .foot {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex: none;
   }
   .cnt {
     font-size: 11px;
-    color: var(--faint);
+    color: var(--muted);
   }
   .btns {
     display: flex;
     gap: 6px;
   }
   .fbtn {
-    padding: 5px 11px;
-    border-radius: 8px;
-    background: var(--ink-2);
+    height: 29px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: var(--glass-bg);
     border: 1px solid var(--line);
-    font-size: 12px;
+    font-size: 11.5px;
+    font-weight: 500;
     color: var(--muted);
+    transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
   }
   .fbtn:hover:not(:disabled) {
-    color: var(--text);
-    background: var(--ink-3);
+    color: var(--fg);
+    background: var(--glass-bg-strong);
+    border-color: var(--line-strong);
   }
   .fbtn:disabled {
-    opacity: 0.4;
+    opacity: 0.38;
     cursor: default;
   }
   .fbtn.pri {
-    background: linear-gradient(155deg, rgba(255, 255, 255, 0.28) 0%, transparent 45%), rgb(var(--accent-rgb));
-    border-color: transparent;
-    color: #0b0e14;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 4px 14px rgba(var(--accent-rgb), 0.28);
+    background: rgba(var(--accent-rgb), 0.24);
+    border-color: rgba(var(--accent-rgb), 0.55);
+    color: #ffe3d1;
     font-weight: 600;
+  }
+  .fbtn.pri:hover:not(:disabled) {
+    background: rgba(var(--accent-rgb), 0.36);
+    border-color: rgba(var(--accent-rgb), 0.85);
+    color: #ffffff;
   }
 </style>

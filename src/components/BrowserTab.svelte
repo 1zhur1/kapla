@@ -152,27 +152,31 @@
     }
   }}
 >
-  <div class="top-row">
-    <div class="presets">
-      {#each PRESETS as p}
-        <button
-          class="pchip"
-          class:active={isPresetActive(p.url)}
-          onclick={() => openPreset(p.url)}
-        >
-          {p.label}
-        </button>
-      {/each}
-    </div>
+  <div class="search-bar-row">
+    <form class="addr-row" onsubmit={go}>
+      <span class="s-ico">
+        <Icon name="globe" size={14} />
+      </span>
+      <input
+        type="text"
+        bind:value={address}
+        placeholder="Поиск или URL сайта…"
+        onpointerdown={onFocusInput}
+        onfocus={onFocusInput}
+        onblur={onBlurInput}
+      />
+      <button class="go-btn" type="submit">Открыть</button>
+    </form>
+
     <div class="nav-btns">
       <button class="nbtn" onclick={() => api.browserNav("back")} title="Назад">
-        <Icon name="arrowLeft" size={14} />
+        <Icon name="arrowLeft" size={13} />
       </button>
       <button class="nbtn" onclick={() => api.browserNav("forward")} title="Вперёд">
-        <Icon name="arrowRight" size={14} />
+        <Icon name="arrowRight" size={13} />
       </button>
       <button class="nbtn" class:spin={loading} onclick={() => api.browserNav("reload")} title="Обновить">
-        <Icon name="refresh" size={14} />
+        <Icon name="refresh" size={13} />
       </button>
       <button
         class="nbtn"
@@ -182,23 +186,22 @@
         }}
         title="Открыть в основном браузере"
       >
-        <Icon name="external" size={14} />
+        <Icon name="external" size={13} />
       </button>
     </div>
   </div>
 
-  <form class="addr-row" onsubmit={go}>
-    <Icon name="globe" size={14} />
-    <input
-      type="text"
-      bind:value={address}
-      placeholder="Введи сайт или быстрый запрос в Google и нажми Enter…"
-      onpointerdown={onFocusInput}
-      onfocus={onFocusInput}
-      onblur={onBlurInput}
-    />
-    <button class="go-btn" type="submit">Открыть</button>
-  </form>
+  <div class="seg-bar">
+    {#each PRESETS as p}
+      <button
+        class="pchip"
+        class:active={isPresetActive(p.url)}
+        onclick={() => openPreset(p.url)}
+      >
+        {p.label}
+      </button>
+    {/each}
+  </div>
 
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="slot" bind:this={slotEl} onpointerdown={() => api.browserFocus().catch(() => {})}>
@@ -219,79 +222,41 @@
     flex-direction: column;
     gap: 8px;
     height: 100%;
+    min-height: 0;
   }
-  .top-row {
+
+  .search-bar-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  .presets {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-  }
-  .pchip {
-    padding: 5px 12px;
-    border-radius: 999px;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--line);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    font-size: 11.5px;
-    font-weight: 500;
-    color: var(--muted);
-    transition: all 140ms var(--ease);
-  }
-  .pchip:hover {
-    color: var(--text);
-    border-color: var(--line-2);
-    background: var(--glass-bg-strong);
-  }
-  .pchip.active {
-    background: rgba(255, 255, 255, 0.14);
-    border-color: rgba(255, 255, 255, 0.28);
-    color: var(--text);
-  }
-  .nav-btns {
-    display: flex;
-    gap: 4px;
+    gap: 7px;
     flex: none;
   }
-  .nbtn {
-    width: 28px;
-    height: 28px;
-    border-radius: 9px;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--line);
-    display: grid;
-    place-items: center;
-    color: var(--muted);
-  }
-  .nbtn:hover {
-    color: var(--text);
-    background: var(--glass-bg-strong);
-  }
-  .nbtn.spin {
-    color: rgb(var(--accent-rgb));
-  }
+
   .addr-row {
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 8px;
-    height: 32px;
-    padding: 0 5px 0 12px;
+    height: 34px;
+    padding: 0 5px 0 13px;
     border-radius: 999px;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
+    background: rgba(20, 22, 28, 0.78);
     border: 1px solid var(--line);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
     color: var(--muted);
+    transition: border-color var(--t-fast), box-shadow var(--t-fast);
   }
   .addr-row:focus-within {
-    border-color: rgba(var(--accent-rgb), 0.55);
-    color: var(--text);
+    border-color: rgba(var(--accent-rgb), 0.52);
+    box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.14);
+    color: var(--fg);
+  }
+  .s-ico {
+    display: grid;
+    place-items: center;
+    opacity: 0.72;
+    flex: none;
   }
   .addr-row input {
     flex: 1;
@@ -300,30 +265,100 @@
     border: 0;
     outline: none;
     font-size: 12px;
-    color: var(--text);
+    color: var(--fg);
   }
+  .addr-row input::placeholder {
+    color: var(--muted);
+  }
+
   .go-btn {
     height: 24px;
-    padding: 0 10px;
-    border-radius: 6px;
-    background: var(--ink-3);
-    border: 1px solid var(--line);
+    padding: 0 11px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     font-size: 11px;
-    color: var(--text);
+    font-weight: 500;
+    color: var(--fg);
+    transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
   }
   .go-btn:hover {
+    background: rgba(var(--accent-rgb), 0.22);
     border-color: rgba(var(--accent-rgb), 0.5);
+    color: #fff;
+  }
+
+  .nav-btns {
+    display: flex;
+    gap: 4px;
+    flex: none;
+  }
+  .nbtn {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    background: rgba(20, 22, 28, 0.76);
+    border: 1px solid var(--line);
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  }
+  .nbtn:hover {
+    color: var(--fg);
+    background: var(--glass-bg-strong);
+    border-color: var(--line-strong);
+  }
+  .nbtn.spin {
     color: rgb(var(--accent-rgb));
   }
+
+  /* Unified segmented AI preset bar */
+  .seg-bar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px;
+    border-radius: 999px;
+    background: rgba(18, 20, 26, 0.76);
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .pchip {
+    flex: 1;
+    min-width: 0;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  }
+  .pchip:hover {
+    color: var(--fg);
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .pchip.active {
+    background: rgba(54, 58, 68, 0.92);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
   .slot {
     position: relative;
     flex: 1;
     min-height: 0;
-    border-radius: 14px;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
+    border-radius: var(--r-m);
+    background: rgba(18, 20, 26, 0.8);
     border: 1px solid var(--line);
-    box-shadow: var(--surface-sheen);
+    box-shadow: var(--shadow-soft);
     overflow: hidden;
     display: grid;
     place-items: center;

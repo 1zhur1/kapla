@@ -66,7 +66,7 @@
 <div class="grid">
   <section class="card pad">
     <div class="head">
-      <span>Быстрая заметка</span>
+      <span class="htitle">Быстрая заметка</span>
       <div class="nacts">
         <button class="nbtn" onclick={copyNote} disabled={!note.trim()}>Копировать</button>
         <button class="nbtn" onclick={() => (note = "")} disabled={!note}>Очистить</button>
@@ -74,7 +74,7 @@
     </div>
     <textarea
       bind:value={note}
-      placeholder="Идея, ссылка или список дел — просто начни печатать…"
+      placeholder="Идея, ссылка или список дел — просто начните печатать…"
       onpointerdown={onPointerDown}
       onfocus={onFocus}
       onblur={onBlur}
@@ -82,14 +82,14 @@
     ></textarea>
   </section>
 
-  <section class="card timer-box">
+  <section class="card timer-box" class:running={timerLeft !== null}>
     <div class="head">
-      <span>Таймер</span>
+      <span class="htitle">Таймер</span>
       {#if timerLeft !== null}
         <span class="mono live">идёт</span>
       {/if}
     </div>
-    <div class="display mono">
+    <div class="display mono" class:running={timerLeft !== null}>
       {timerLeft !== null ? fmtTime(timerLeft) : "00:00"}
     </div>
     <div class="presets">
@@ -108,12 +108,12 @@
         onfocus={onFocus}
         onblur={onBlur}
       />
-      <button class="pbtn" type="submit">Старт</button>
+      <button class="start-cta" type="submit">Старт</button>
     </form>
     {#if timerLeft !== null}
       <button class="stop" onclick={onStopTimer}>Сбросить таймер</button>
     {:else}
-      <p class="tip">Во время отсчёта таймер виден прямо в свёрнутой капле.</p>
+      <p class="tip">Во время отсчёта таймер виден прямо в свёрнутой капле</p>
     {/if}
   </section>
 </div>
@@ -121,46 +121,121 @@
 <style>
   .grid {
     display: grid;
-    grid-template-columns: 1.4fr 1fr;
-    gap: 12px;
+    grid-template-columns: 1.38fr 1fr;
+    gap: 10px;
     height: 100%;
+    min-height: 0;
   }
   .card {
     background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--line);
     border-radius: var(--r-m);
-    box-shadow: var(--surface-sheen);
-    padding: 14px;
+    box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    padding: 12px 13px;
     display: flex;
     flex-direction: column;
+    min-height: 0;
+  }
+  .timer-box.running {
+    border-color: rgba(var(--accent-rgb), 0.45);
+    box-shadow: 0 0 22px rgba(var(--accent-rgb), 0.14);
   }
   .head {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 12px;
-    color: var(--muted);
-    margin-bottom: 10px;
+    margin-bottom: 9px;
+    flex: none;
+  }
+  .htitle {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--fg);
   }
   .nacts {
     display: flex;
     gap: 5px;
   }
   .nbtn {
-    font-size: 10.5px;
-    padding: 2px 7px;
-    border-radius: 6px;
-    background: var(--ink-3);
+    height: 24px;
+    font-size: 11px;
+    padding: 0 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--line);
     color: var(--muted);
+    transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
   }
   .nbtn:hover:not(:disabled) {
-    color: var(--text);
+    color: var(--fg);
+    background: rgba(255, 255, 255, 0.1);
     border-color: rgba(var(--accent-rgb), 0.45);
   }
   .nbtn:disabled {
     opacity: 0.35;
+  }
+  textarea {
+    flex: 1;
+    width: 100%;
+    resize: none;
+    background: rgba(18, 20, 26, 0.65);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 12px;
+    color: var(--fg);
+    font: inherit;
+    font-size: 12.5px;
+    line-height: 1.55;
+    outline: none;
+  }
+  textarea::placeholder {
+    color: var(--muted);
+  }
+  textarea:focus {
+    border-color: rgba(var(--accent-rgb), 0.5);
+  }
+
+  .timer-box {
+    justify-content: space-between;
+  }
+  .live {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(var(--accent-rgb), 0.16);
+    border: 1px solid rgba(var(--accent-rgb), 0.4);
+    color: #ffd5bc;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .display {
+    font-size: 38px;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: -0.03em;
+    color: var(--fg);
+    margin: 4px 0;
+  }
+  .display.running {
+    color: rgb(var(--accent-rgb));
+  }
+  .presets {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  .pbtn {
+    height: 31px;
+    border-radius: 10px;
+    background: rgba(18, 20, 26, 0.62);
+    border: 1px solid var(--line);
+    font-size: 11.5px;
+    color: var(--fg);
+    transition: border-color var(--t-fast), background var(--t-fast);
+  }
+  .pbtn:hover {
+    border-color: rgba(var(--accent-rgb), 0.5);
+    background: rgba(var(--accent-rgb), 0.12);
+    color: #ffd5bc;
   }
   .custom-tmr {
     display: flex;
@@ -168,82 +243,48 @@
   }
   .custom-tmr input {
     width: 68px;
-    height: 32px;
-    border-radius: var(--r-s);
-    background: var(--ink-3);
+    height: 30px;
+    border-radius: 999px;
+    background: rgba(18, 20, 26, 0.68);
     border: 1px solid var(--line);
     text-align: center;
     font-size: 12px;
+    color: var(--fg);
     outline: none;
   }
   .custom-tmr input:focus {
     border-color: rgba(var(--accent-rgb), 0.55);
   }
-  .custom-tmr .pbtn {
+  .start-cta {
     flex: 1;
-    height: 32px;
-  }
-  .live {
-    color: rgb(var(--accent-rgb));
-    font-size: 11px;
-  }
-  textarea {
-    flex: 1;
-    width: 100%;
-    resize: none;
-    background: var(--ink-3);
-    border: 1px solid var(--line);
-    border-radius: var(--r-s);
-    padding: 10px 12px;
-    color: var(--text);
-    font: inherit;
-    font-size: 13px;
-    line-height: 1.5;
-    outline: none;
-  }
-  textarea:focus {
-    border-color: rgba(var(--accent-rgb), 0.55);
-  }
-  .timer-box {
-    justify-content: space-between;
-  }
-  .display {
-    font-size: 40px;
+    height: 30px;
+    border-radius: 999px;
+    background: rgba(var(--accent-rgb), 0.24);
+    border: 1px solid rgba(var(--accent-rgb), 0.55);
+    color: #ffe3d1;
+    font-size: 11.5px;
     font-weight: 600;
-    text-align: center;
-    letter-spacing: -0.03em;
-    margin: 6px 0;
+    transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
   }
-  .presets {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-  .pbtn {
-    height: 34px;
-    border-radius: var(--r-s);
-    background: var(--ink-3);
-    border: 1px solid var(--line);
-    font-size: 12px;
-    transition: all 140ms var(--ease);
-  }
-  .pbtn:hover {
-    border-color: rgba(var(--accent-rgb), 0.5);
-    color: rgb(var(--accent-rgb));
+  .start-cta:hover {
+    background: rgba(var(--accent-rgb), 0.36);
+    border-color: rgba(var(--accent-rgb), 0.85);
+    color: #fff;
   }
   .stop {
-    height: 34px;
-    border-radius: var(--r-s);
+    height: 30px;
+    border-radius: 999px;
     background: rgba(255, 95, 82, 0.14);
-    color: var(--danger);
-    font-size: 12px;
+    border: 1px solid rgba(255, 95, 82, 0.34);
+    color: #ff9c9c;
+    font-size: 11.5px;
     font-weight: 500;
   }
   .tip {
     margin: 0;
-    font-size: 11.5px;
-    color: var(--faint);
+    font-size: 11px;
+    color: var(--muted);
     text-align: center;
-    line-height: 1.4;
+    line-height: 1.35;
   }
 </style>
