@@ -130,7 +130,27 @@
     <header class="bar" ondblclick={onBarDblClick} title="Двойной клик — свернуть в мини-каплю">
       <div class="brand">
         <span class="logo" aria-hidden="true">
-          <span class="logo-drop"></span>
+          <svg class="logo-svg" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M12 2.5C12 2.5 5.5 10.2 5.5 15a6.5 6.5 0 0 0 13 0c0-4.8-6.5-12.5-6.5-12.5Z"
+              stroke="url(#kaplaDropG)"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M9.6 14.8a2.7 2.7 0 0 0 2.4 2.8"
+              stroke="rgba(255,255,255,0.65)"
+              stroke-width="1.4"
+              stroke-linecap="round"
+            />
+            <defs>
+              <linearGradient id="kaplaDropG" x1="12" y1="2.5" x2="12" y2="21.5" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#ffd5b8" />
+                <stop offset="55%" stop-color="#ff8a47" />
+                <stop offset="100%" stop-color="#ff622d" />
+              </linearGradient>
+            </defs>
+          </svg>
         </span>
         <div class="title-slot">
           {#key ui.tab}
@@ -275,27 +295,21 @@
   }
   .logo {
     position: relative;
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     flex: none;
-    border-radius: 9px;
     display: grid;
     place-items: center;
-    background: linear-gradient(155deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
-    border: 1px solid var(--line);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    filter: drop-shadow(0 0 8px rgba(var(--accent-rgb), 0.55));
+    transition: transform 260ms var(--ease-spring), filter 260ms var(--ease);
   }
-  .logo-drop {
-    width: 8px;
-    height: 8px;
-    border-radius: 50% 50% 50% 15%;
-    transform: rotate(-45deg);
-    background: linear-gradient(135deg, #ffffff 0%, rgb(var(--accent-rgb)) 80%);
-    box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.55);
-    transition: transform 260ms var(--ease-spring);
+  .logo-svg {
+    width: 24px;
+    height: 24px;
   }
-  .brand:hover .logo-drop {
-    transform: rotate(-45deg) scale(1.16);
+  .brand:hover .logo {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 12px rgba(var(--accent-rgb), 0.78));
   }
 
   .title-slot {
@@ -323,19 +337,19 @@
     text-overflow: ellipsis;
   }
 
-  /* ── Стеклянная навигационная панель ── */
+  /* ── Капсульный док в стиле hero-preview ── */
   .dock {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 2px;
-    padding: 4px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.055);
-    border: 1px solid var(--line);
+    gap: 3px;
+    padding: 4px 5px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.14),
-      0 8px 20px rgba(0, 0, 0, 0.22);
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 8px 20px rgba(0, 0, 0, 0.28);
     backdrop-filter: var(--glass-blur);
   }
   .glider {
@@ -343,38 +357,24 @@
     left: 0;
     top: 4px;
     bottom: 4px;
-    border-radius: 10px;
+    border-radius: 999px;
     pointer-events: none;
-    background: linear-gradient(160deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.07));
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.25),
-      0 2px 10px rgba(0, 0, 0, 0.24);
+    background: linear-gradient(180deg, #ffffff 0%, #e7ebf3 100%);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
     transition:
       transform 280ms var(--ease-spring),
       width 220ms var(--ease);
-  }
-  .glider::after {
-    content: "";
-    position: absolute;
-    left: 28%;
-    right: 28%;
-    bottom: -1px;
-    height: 2px;
-    border-radius: 2px;
-    background: rgb(var(--accent-rgb));
-    box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.7);
   }
 
   .dk {
     position: relative;
     z-index: 1;
-    width: 34px;
+    width: 36px;
     height: 30px;
-    border-radius: 10px;
+    border-radius: 999px;
     display: grid;
     place-items: center;
-    color: var(--muted);
+    color: rgba(235, 240, 250, 0.72);
     transition: color 160ms var(--ease), transform 160ms var(--ease);
   }
   .dk-ic {
@@ -383,19 +383,19 @@
     transition: transform 200ms var(--ease-spring);
   }
   .dk:hover {
-    color: var(--text);
+    color: #ffffff;
   }
   .dk:hover .dk-ic {
     transform: translateY(-1px);
   }
   .dk.active {
-    color: var(--text);
+    color: #15171d;
   }
   .dk.active .dk-ic {
-    color: rgb(var(--accent-rgb));
+    color: #15171d;
   }
   .dk.active :global(svg.i .duo) {
-    opacity: 0.36;
+    opacity: 0.26;
   }
 
   .badge {

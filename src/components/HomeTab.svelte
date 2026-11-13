@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Bars from "./Bars.svelte";
   import Icon from "./Icon.svelte";
   import { api } from "../lib/ipc";
   import { ui, flash, fmtTime, openImageEditor, type Tab } from "../lib/state.svelte";
@@ -27,6 +26,29 @@
     }, 1000);
     return () => clearInterval(id);
   });
+
+  // Плавный тик для симметричной звуковой волны (waveform)
+  let waveTick = $state(0);
+  $effect(() => {
+    if (!ui.media.active || !ui.media.playing) return;
+    const id = setInterval(() => {
+      waveTick = (waveTick + 1) % 3600;
+    }, 110);
+    return () => clearInterval(id);
+  });
+
+  const WAVE_BASE = [
+    18, 28, 42, 34, 60, 48, 76, 56, 88, 66, 94, 72, 62, 84, 52, 92,
+    78, 96, 68, 86, 58, 82, 46, 70, 54, 76, 44, 62, 38, 48, 30, 22,
+  ];
+  const waveBars = $derived(
+    WAVE_BASE.map((base, i) => {
+      if (!ui.media.playing) return Math.max(14, Math.round(base * 0.35));
+      const lvl = 0.72 + Math.min(0.65, ui.audioLevel * 0.85);
+      const osc = Math.sin(waveTick * 0.36 + i * 0.65) * 16 + Math.cos(waveTick * 0.22 - i * 0.4) * 10;
+      return Math.max(16, Math.min(100, Math.round(base * lvl + osc)));
+    }),
+  );
 
   const progress = $derived(ui.media.duration > 0 ? Math.min(100, (pos / ui.media.duration) * 100) : 0);
   const dateLabel = $derived(
@@ -123,12 +145,6 @@
   let weatherErr = $state("");
   let cityBlurTimer: number | undefined;
 
-  function weatherIconName(kind?: string): "sun" | "cloud" | "bolt" {
-    if (kind === "sun") return "sun";
-    if (kind === "storm") return "bolt";
-    return "cloud";
-  }
-
   function weatherEmoji(kind?: string): string {
     switch (kind) {
       case "sun":
@@ -204,59 +220,97 @@
 </script>
 
 <div class="grid">
-  <!-- Левая часть: стеклянный медиа-хаб или часы + погода -->
-  <section class="card stage enter-1">
-    {#if ui.media.active}
-      <div class="glow" class:live={ui.media.playing}></div>
-      {#if ui.media.cover}
-        <img class="art-bg" src={ui.media.cover} alt="" aria-hidden="true" />
-      {/if}
-      <div class="media-head">
-        {#if ui.media.cover}
-          <div class="art-wrap" class:playing={ui.media.playing}>
+  <!-- Левая колонка: плеер/часы сверху + разделённая погода снизу -->
+  <div class="left-col">
+    <section class="card stage">
+      {#if ui.media.active}
+        <div class="media-top">
+          {#if ui.media.cover}
             <img class="art" src={ui.media.cover} alt="" />
+          {:else}
+            <div class="art empty"><Icon name="music" size={24} /></div>
+          {/if}
+
+          <div class="meta">
+            <div class="title-row">
+              <div class="title" title={ui.media.title}>{ui.media.title}</div>
+              <span class="app-pill" title={ui.media.app || "Медиа"}>
+                <span class="live-dot" class:on={ui.media.playing}></span>
+                <span class="app-txt">{ui.media.app || "Музыка"}</span>
+              </span>
+            </div>
+            <div class="artist" title={ui.media.artist}>{ui.media.artist || "Неизвестный исполнитель"}</div>
+            <div class="transport">
+              <button class="tbtn" onclick={() => api.media("prev")} aria-label="Предыдущий трек">
+                <Icon name="prev" size={15} />
+              </button>
+              <button
+                class="tbtn play"
+                class:playing={ui.media.playing}
+                onclick={() => api.media("toggle")}
+                aria-label={ui.media.playing ? "Пауза" : "Играть"}
+              >
+                <Icon name={ui.media.playing ? "pause" : "play"} fill size={16} />
+              </button>
+              <button class="tbtn" onclick={() => api.media("next")} aria-label="Следующий трек">
+                <Icon name="next" size={15} />
+              </button>
+            </div>
           </div>
-        {:else}
-          <div class="art empty"><Icon name="music" size={28} /></div>
-        {/if}
-        <div class="meta">
-          <div class="src">
-            <span class="app-tag mono"><span class="live-dot" class:on={ui.media.playing}></span>{ui.media.app || "МЕДИА"}</span>
-            <Bars playing={ui.media.playing} height={12} />
+        </div>
+
+        <div class="waveform" aria-hidden="true">
+          {#each waveBars as h, i}
+            <span
+              class="wbar"
+              class:played={i / waveBars.length <= progress / 100}
+              style:height="{h}%"
+            ></span>
+          {/each}
+        </div>
+
+        <div class="progress-wrap">
+          <div class="pbar"><div class="pfill" style:width="{progress}%"></div></div>
+          <div class="times mono">
+            <span>{fmtTime(pos)}</span>
+            <span>{ui.media.duration > 0 ? `-${fmtTime(Math.max(0, ui.media.duration - pos))}` : "--:--"}</span>
           </div>
-          <div class="title" title={ui.media.title}>{ui.media.title}</div>
-          <div class="artist" title={ui.media.artist}>{ui.media.artist || "Неизвестный исполнитель"}</div>
         </div>
-      </div>
-
-      <div class="progress-wrap">
-        <div class="bar"><div class="fill" style:width="{progress}%"></div></div>
-        <div class="times mono">
-          <span>{fmtTime(pos)}</span>
-          <span>{ui.media.duration > 0 ? `-${fmtTime(Math.max(0, ui.media.duration - pos))}` : "--:--"}</span>
+      {:else}
+        <div class="quiet">
+          <div class="quiet-top">
+            <span class="quiet-date">{dateLabel}</span>
+            <span class="status-pill"><span class="live-dot"></span>Эфир чист</span>
+          </div>
+          <div class="big-clock mono">{timeLabel}</div>
+          <p class="quiet-sub">Включи музыку в плеере или браузере — здесь появятся обложка, волна и управление.</p>
+          <div class="quiet-chips">
+            <span class="qchip">Раскладка <b class="mono">{ui.sys.layout || "—"}</b></span>
+            <button
+              class="qchip qchip-btn"
+              class:ok={ui.vpn.connected}
+              onclick={doVpn}
+              title={ui.vpn.selected ? `${ui.vpn.selected.name}` : "Настроить VPN в Пульте"}
+            >
+              <Icon name="shield" size={11} />
+              <span>VPN</span>
+              <b class="mono">{ui.vpn.configured ? (ui.vpn.connected ? "ВКЛ" : "ВЫКЛ") : "+"}</b>
+            </button>
+          </div>
         </div>
-      </div>
+      {/if}
+    </section>
 
-      <div class="transport">
-        <button class="tbtn" onclick={() => api.media("prev")} aria-label="Предыдущий трек">
-          <Icon name="prev" size={18} />
-        </button>
-        <button class="play" class:playing={ui.media.playing} onclick={() => api.media("toggle")} aria-label={ui.media.playing ? "Пауза" : "Играть"}>
-          <Icon name={ui.media.playing ? "pause" : "play"} fill size={20} />
-        </button>
-        <button class="tbtn" onclick={() => api.media("next")} aria-label="Следующий трек">
-          <Icon name="next" size={18} />
-        </button>
-      </div>
-
-      <div class="wx-mini">
-        {#if editingCity}
+    <!-- Погода: 2-секционный виджет как на hero-preview -->
+    <div class="wx-row">
+      {#if editingCity}
+        <section class="card wx-edit-card">
           <form class="wx-city-form" onsubmit={saveCity}>
             <input
               class="wx-input"
               type="text"
               bind:value={cityDraft}
-              placeholder="Город (пусто — авто)"
+              placeholder="Город (например: Moscow или пусто — авто)"
               onpointerdown={onCityPointerDown}
               onfocus={onCityFocus}
               onblur={onCityBlur}
@@ -270,13 +324,19 @@
             />
             <button class="wx-act" type="submit">OK</button>
           </form>
-        {:else if ui.weather}
-          <div class="wx-mini-left">
-            <span class="wx-ico" title={ui.weather.desc}>{weatherEmoji(ui.weather.icon)}</span>
-            <span class="wx-temp mono">{ui.weather.temp_c > 0 ? `+${ui.weather.temp_c}` : ui.weather.temp_c}°</span>
-            <span class="wx-desc">{ui.weather.desc}</span>
+        </section>
+      {:else if ui.weather}
+        <section class="card wx-main-card">
+          <div class="wx-top">
+            <span class="wx-ico">{weatherEmoji(ui.weather.icon)}</span>
+            <span class="wx-big-temp mono">{ui.weather.temp_c > 0 ? `+${ui.weather.temp_c}` : ui.weather.temp_c}°</span>
           </div>
-          <div class="wx-mini-right">
+          <div class="wx-label">Погода</div>
+          <div class="wx-cond" title={ui.weather.desc}>{ui.weather.desc}</div>
+        </section>
+
+        <section class="card wx-detail-card">
+          <div class="wx-dhead">
             <button class="wx-city-btn" onclick={startEditCity} title="Сменить город">
               {ui.weather.city || ui.weatherCity || "Город"}
             </button>
@@ -284,167 +344,100 @@
               <Icon name="refresh" size={12} />
             </button>
           </div>
-        {:else}
+          <div class="wx-drows mono">
+            <div class="wx-drow">
+              <span>Ощущается</span>
+              <b>{ui.weather.feels_like_c > 0 ? `+${ui.weather.feels_like_c}` : ui.weather.feels_like_c}°</b>
+            </div>
+            {#if ui.weather.min_c != null && ui.weather.max_c != null}
+              <div class="wx-drow">
+                <span>Диапазон</span>
+                <b>{ui.weather.min_c}..{ui.weather.max_c}°</b>
+              </div>
+            {/if}
+            <div class="wx-drow">
+              <span>Ветер</span>
+              <b>{ui.weather.wind_kmph} км/ч</b>
+            </div>
+            <div class="wx-drow">
+              <span>Влажность</span>
+              <b>{ui.weather.humidity}%</b>
+            </div>
+          </div>
+        </section>
+      {:else}
+        <section class="card wx-empty-card">
           <button class="wx-load" onclick={() => loadWeather(true)} disabled={weatherBusy}>
-            <Icon name="cloud" size={13} />
-            <span>{weatherBusy ? "Загружаю погоду…" : weatherErr || "Показать погоду"}</span>
+            <Icon name="cloud" size={14} />
+            <span>{weatherBusy ? "Загружаю погоду…" : weatherErr ? `${weatherErr} — повторить` : "Показать погоду"}</span>
           </button>
-        {/if}
-      </div>
-    {:else}
-      <div class="quiet">
-        <div class="quiet-top">
-          <span class="mono quiet-date">{dateLabel}</span>
-          <span class="status-pill"><span class="live-dot"></span>Эфир чист</span>
-        </div>
-        <div class="big-clock mono">{timeLabel}</div>
-        <p class="quiet-sub">Включи трек в Spotify, Яндекс Музыке или браузере — обложка и управление появятся здесь.</p>
+          <button class="wx-city-btn" onclick={startEditCity}>Город</button>
+        </section>
+      {/if}
+    </div>
+  </div>
 
-        <div class="wx-card">
-          {#if editingCity}
-            <form class="wx-city-form" onsubmit={saveCity}>
-              <input
-                class="wx-input"
-                type="text"
-                bind:value={cityDraft}
-                placeholder="Город (например: Moscow или пусто — авто)"
-                onpointerdown={onCityPointerDown}
-                onfocus={onCityFocus}
-                onblur={onCityBlur}
-                onkeydown={(e) => {
-                  if (e.key === "Escape") {
-                    editingCity = false;
-                    ui.inputMode = false;
-                    api.endInput().catch(() => {});
-                  }
-                }}
-              />
-              <button class="wx-act" type="submit">Сохранить</button>
-            </form>
-          {:else if ui.weather}
-            <div class="wx-head">
-              <div class="wx-main">
-                <span class="wx-big-ico">{weatherEmoji(ui.weather.icon)}</span>
-                <div>
-                  <div class="wx-temp-row">
-                    <span class="wx-big-temp mono">{ui.weather.temp_c > 0 ? `+${ui.weather.temp_c}` : ui.weather.temp_c}°</span>
-                    <span class="wx-cond">{ui.weather.desc}</span>
-                  </div>
-                  <div class="wx-sub mono">
-                    Ощущ. {ui.weather.feels_like_c > 0 ? `+${ui.weather.feels_like_c}` : ui.weather.feels_like_c}°{#if ui.weather.min_c != null && ui.weather.max_c != null} · {ui.weather.min_c}..{ui.weather.max_c}°{/if} · ветер {ui.weather.wind_kmph} км/ч · влажн. {ui.weather.humidity}%
-                  </div>
-                </div>
-              </div>
-              <div class="wx-actions">
-                <button class="wx-city-btn" onclick={startEditCity} title="Настроить город (при VPN может определяться прокси)">
-                  {ui.weather.city || ui.weatherCity || "Авто"}
-                </button>
-                <button class="wx-ref" onclick={() => loadWeather(true)} disabled={weatherBusy} title="Обновить погоду">
-                  <Icon name={weatherIconName(ui.weather.icon)} size={12} />
-                </button>
-              </div>
-            </div>
-          {:else}
-            <div class="wx-empty">
-              <button class="wx-load" onclick={() => loadWeather(true)} disabled={weatherBusy}>
-                <Icon name="cloud" size={14} />
-                <span>{weatherBusy ? "Загружаю погоду…" : weatherErr ? `${weatherErr} — повторить` : "Загрузить погоду"}</span>
-              </button>
-              <button class="wx-city-btn" onclick={startEditCity}>Город</button>
-            </div>
-          {/if}
-        </div>
-      </div>
-    {/if}
-  </section>
-
-  <!-- Правая часть: звук, стеклянный бенто-док и свежий буфер -->
+  <!-- Правая колонка: пилюля громкости, 2x2 быстрые кнопки, буфер обмена -->
   <div class="side">
-    <section class="card vol-card enter-2">
-      <div class="card-h">
-        <span>Громкость</span>
-        <span class="mono val">{ui.sys.muted ? "MUTE" : `${Math.round(ui.sys.volume * 100)}%`}</span>
-      </div>
-      <div class="vol-row">
-        <button class="mute-btn" class:muted={ui.sys.muted} onclick={() => api.toggleMute()} aria-label="Выключить звук">
-          <Icon name={ui.sys.muted || ui.sys.volume === 0 ? "mute" : "volume"} size={16} />
+    <section class="card vol-card">
+      <button class="mute-btn" class:muted={ui.sys.muted} onclick={() => api.toggleMute()} aria-label="Выключить звук">
+        <Icon name={ui.sys.muted || ui.sys.volume === 0 ? "mute" : "volume"} size={16} />
+      </button>
+      <input
+        class="slider"
+        type="range"
+        min="0"
+        max="100"
+        value={Math.round(ui.sys.volume * 100)}
+        style:--vol-pct="{ui.sys.muted ? 0 : Math.round(ui.sys.volume * 100)}%"
+        oninput={onVolInput}
+        aria-label="Громкость"
+      />
+      <span class="mono val">{ui.sys.muted ? "MUTE" : `${Math.round(ui.sys.volume * 100)}%`}</span>
+    </section>
+
+    <section class="card qa-card">
+      <div class="qa-grid">
+        <button class="qbtn" onclick={doSnip} title="Ножницы Windows (вырезать область)">
+          <Icon name="scissors" size={14} />
+          <span>Ножницы</span>
         </button>
-        <input
-          class="slider"
-          type="range"
-          min="0"
-          max="100"
-          value={Math.round(ui.sys.volume * 100)}
-          style:--vol-pct="{ui.sys.muted ? 0 : Math.round(ui.sys.volume * 100)}%"
-          oninput={onVolInput}
-          aria-label="Громкость"
-        />
-      </div>
-      <div class="chips">
-        <span class="chip">Раскладка <b class="mono">{ui.sys.layout || "—"}</b></span>
-        {#if ui.sys.battery !== null}
-          <span class="chip" class:ok={ui.sys.charging}>
-            {#if ui.sys.charging}<Icon name="bolt" size={11} />{/if}
-            Заряд <b class="mono">{ui.sys.battery}%</b>
-          </span>
-        {/if}
-        {#if ui.sys.caps}
-          <span class="chip warn">CAPS LOCK</span>
-        {/if}
-        <button
-          class="chip chip-btn"
-          class:ok={ui.vpn.connected}
-          onclick={doVpn}
-          title={ui.vpn.selected
-            ? `${ui.vpn.selected.name}: клик — ${ui.vpn.connected ? "отключить" : "подключить"}`
-            : "Настроить VPN в пульте"}
-        >
-          <Icon name="shield" size={12} />
-          <span>VPN</span>
-          <b class="mono">{ui.vpn.configured ? (ui.vpn.connected ? "ВКЛ" : "ВЫКЛ") : "+"}</b>
+        <button class="qbtn" onclick={doShot} title="Скриншот всего экрана -> Картинки/Kapla + буфер">
+          <Icon name="camera" size={14} />
+          <span>Скриншот</span>
+        </button>
+        <button class="qbtn" onclick={doColor} title="Пипетка: кликни любой пиксель экрана -> HEX">
+          <Icon name="pipette" size={14} />
+          <span>Пипетка</span>
+        </button>
+        <button class="qbtn" class:warn={ui.sys.mic_muted} onclick={doMic} title="Микрофон (Ctrl+Alt+M)">
+          <Icon name={ui.sys.mic_muted ? "micOff" : "mic"} size={14} />
+          <span>{ui.sys.mic_muted ? "Мик выкл" : "Микрофон"}</span>
         </button>
       </div>
     </section>
 
-    <div class="qa-row enter-3">
-      <button class="qbtn qa-amber" onclick={doSnip} title="Ножницы Windows (вырезать область)">
-        <span class="qbadge"><Icon name="scissors" size={15} /></span>
-        <span>Ножницы</span>
-      </button>
-      <button class="qbtn qa-cyan" onclick={doShot} title="Скриншот всего экрана -> Картинки/Kapla + буфер">
-        <span class="qbadge"><Icon name="camera" size={15} /></span>
-        <span>Скрин</span>
-      </button>
-      <button class="qbtn qa-violet" onclick={doColor} title="Пипетка: кликни любой пиксель экрана -> HEX">
-        <span class="qbadge"><Icon name="pipette" size={15} /></span>
-        <span>HEX</span>
-      </button>
-      <button class="qbtn qa-mint" class:warn={ui.sys.mic_muted} onclick={doMic} title="Микрофон (Ctrl+Alt+M)">
-        <span class="qbadge"><Icon name={ui.sys.mic_muted ? "micOff" : "mic"} size={15} /></span>
-        <span>{ui.sys.mic_muted ? "Выкл" : "Мик"}</span>
-      </button>
-    </div>
-
-    <section class="card recent enter-4">
+    <section class="card recent">
       <div class="card-h">
-        <span>Последнее в буфере</span>
+        <span>Буфер обмена</span>
         <button class="link" onclick={() => onTab("clipboard")}>Все ({ui.clips.length}) →</button>
       </div>
       {#if ui.clips.length === 0}
         <div class="empty-clips">Скопируй текст или картинку — клик здесь сразу вставит в активное окно.</div>
       {:else}
         <div class="clip-mini-list">
-          {#each ui.clips.slice(0, 2) as clip (clip.id)}
+          {#each ui.clips.slice(0, 3) as clip, idx (clip.id)}
             <div class="clip-row">
               <button
                 class="clip-mini"
+                class:first={idx === 0}
                 onclick={() => pasteLatest(clip.id)}
                 title={clip.text}
               >
                 {#if clip.kind === "image" && clip.preview}
                   <img class="mini-thumb" src={clip.preview} alt="" />
                 {:else}
-                  <span class="clip-ic"><Icon name="copy" size={12} /></span>
+                  <span class="clip-ic"><Icon name="file" size={12} /></span>
                 {/if}
                 <span class="clip-txt">{clip.text}</span>
               </button>
@@ -468,532 +461,574 @@
 <style>
   .grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: 1fr 1.02fr;
+    gap: 11px;
     height: 100%;
-    min-width: 0;
+    min-height: 0;
   }
-  .enter-1 {
-    animation: kaplaFadeUp 260ms var(--ease) backwards;
-  }
-  .enter-2 {
-    animation: kaplaFadeUp 280ms var(--ease) 40ms backwards;
-  }
-  .enter-3 {
-    animation: kaplaFadeUp 300ms var(--ease) 80ms backwards;
-  }
-  .enter-4 {
-    animation: kaplaFadeUp 320ms var(--ease) 120ms backwards;
-  }
+
   .card {
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--line);
-    border-radius: var(--r-m);
-    padding: 15px;
     position: relative;
-    overflow: hidden;
+    border-radius: 16px;
+    background: rgba(31, 34, 41, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 8px 20px rgba(0, 0, 0, 0.22);
+    padding: 12px 14px;
+    min-height: 0;
     min-width: 0;
-    box-shadow: var(--surface-sheen);
-    transition: border-color 200ms var(--ease), background 200ms var(--ease), transform 220ms var(--ease);
   }
-  .card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.14) 50%, transparent 70%);
-    transform: translateX(-130%);
-    transition: transform 650ms var(--ease);
-    pointer-events: none;
+
+  .left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    min-width: 0;
   }
-  .card:hover::before {
-    transform: translateX(130%);
-  }
-  .card:hover {
-    border-color: var(--line-2);
-  }
+
+  /* ── Левый верх: Плеер / Часы ── */
   .stage {
+    flex: 1.32;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    gap: 8px;
+    overflow: hidden;
   }
-  .art-bg {
-    position: absolute;
-    inset: -25%;
-    width: 150%;
-    height: 150%;
-    object-fit: cover;
-    filter: blur(36px) saturate(165%);
-    opacity: 0.28;
-    pointer-events: none;
-    transform: scale(1.08);
-    transition: opacity 400ms var(--ease);
-  }
-  .glow {
-    position: absolute;
-    inset: -40px -20px auto -20px;
-    height: 185px;
-    background: radial-gradient(circle at 25% 20%, rgba(var(--accent-rgb), 0.28), rgba(92, 212, 255, 0.1) 55%, transparent 75%);
-    pointer-events: none;
-    transition: opacity 300ms var(--ease);
-  }
-  .glow.live {
-    animation: kaplaGlowBreathe 3.2s ease-in-out infinite;
-  }
-  @keyframes kaplaGlowBreathe {
-    0%,
-    100% {
-      opacity: 0.85;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1.06);
-    }
-  }
-  .media-head {
+
+  .media-top {
     display: flex;
-    gap: 14px;
     align-items: center;
-    position: relative;
-  }
-  .art-wrap {
-    position: relative;
-    flex: none;
-    border-radius: 16px;
-    padding: 2px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(var(--accent-rgb), 0.35), rgba(130, 225, 255, 0.35));
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.42), 0 0 22px rgba(var(--accent-rgb), 0.22);
-    transition: transform 280ms var(--ease-spring), box-shadow 280ms var(--ease);
-  }
-  .art-wrap.playing {
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), 0 0 28px rgba(var(--accent-rgb), 0.42);
+    gap: 12px;
+    min-width: 0;
   }
   .art {
-    width: 76px;
-    height: 76px;
-    border-radius: 14px;
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
     object-fit: cover;
-    display: block;
     flex: none;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
   }
   .art.empty {
-    width: 78px;
-    height: 78px;
-    border-radius: 15px;
     display: grid;
     place-items: center;
-    background: var(--glass-bg-strong);
-    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.06);
     color: var(--muted);
   }
   .meta {
-    min-width: 0;
     flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
-  .src {
+  .title-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 6px;
-  }
-  .app-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgb(var(--accent-rgb));
-  }
-  .live-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 99px;
-    background: rgba(255, 255, 255, 0.45);
-    display: inline-block;
-  }
-  .live-dot.on {
-    background: var(--ok);
-    box-shadow: 0 0 8px rgba(126, 232, 162, 0.85);
-    animation: kaplaPulse 2s ease-in-out infinite;
+    gap: 8px;
   }
   .title {
-    font-size: 16.5px;
+    font-size: 13.5px;
     font-weight: 600;
-    line-height: 1.25;
+    color: var(--text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .app-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 7px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 10px;
+    color: var(--muted);
+    flex: none;
+  }
+  .app-txt {
+    max-width: 68px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .live-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--faint);
+  }
+  .live-dot.on {
+    background: rgb(var(--accent-rgb));
+    box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.9);
   }
   .artist {
-    font-size: 12.5px;
+    font-size: 11.5px;
     color: var(--muted);
-    margin-top: 3px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-  .progress-wrap {
-    margin-top: 12px;
-    position: relative;
-  }
-  .bar {
-    height: 6px;
-    border-radius: 99px;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    overflow: hidden;
-  }
-  .fill {
-    height: 100%;
-    border-radius: 99px;
-    background: linear-gradient(90deg, rgba(130, 225, 255, 0.85), rgb(var(--accent-rgb)));
-    box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.55);
-    transition: width 350ms linear;
-  }
-  .times {
-    display: flex;
-    justify-content: space-between;
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 6px;
   }
   .transport {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 16px;
-    margin-top: 8px;
-    position: relative;
+    gap: 6px;
+    margin-top: 3px;
   }
   .tbtn {
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
+    width: 26px;
+    height: 24px;
+    border-radius: 7px;
     display: grid;
     place-items: center;
-    color: var(--muted);
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid transparent;
-    transition: background 160ms var(--ease), color 160ms var(--ease), transform 180ms var(--ease-spring), border-color 160ms var(--ease);
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.05);
+    transition: background 140ms var(--ease), transform 140ms var(--ease);
   }
   .tbtn:hover {
-    background: var(--glass-bg-strong);
-    border-color: var(--line);
-    color: var(--text);
-    transform: scale(1.08);
+    background: rgba(255, 255, 255, 0.13);
   }
-  .play {
-    width: 46px;
-    height: 46px;
-    border-radius: 16px;
-    display: grid;
-    place-items: center;
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.35) 0%, transparent 45%), rgb(var(--accent-rgb));
-    color: #0b0e14;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 8px 22px rgba(var(--accent-rgb), 0.42);
-    transition: transform 200ms var(--ease-spring), filter 160ms var(--ease), box-shadow 200ms var(--ease);
+  .tbtn.play {
+    width: 28px;
+    background: rgba(255, 255, 255, 0.14);
   }
-  .play:hover {
-    transform: scale(1.08);
-    filter: brightness(1.1);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 10px 26px rgba(var(--accent-rgb), 0.58);
-  }
-  .play:active {
-    transform: scale(0.95);
+  .tbtn.play.playing {
+    color: rgb(var(--accent-rgb));
   }
 
+  /* ── Янтарная звуковая волна (waveform) ── */
+  .waveform {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 3px;
+    padding: 0 2px;
+  }
+  .wbar {
+    flex: 1;
+    min-width: 2px;
+    max-width: 4px;
+    border-radius: 99px;
+    background: rgba(var(--accent-rgb), 0.34);
+    transition: height 130ms ease-out, background 180ms ease;
+  }
+  .wbar.played {
+    background: linear-gradient(180deg, #ffb478 0%, rgb(var(--accent-rgb)) 60%, #e05328 100%);
+    box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.32);
+  }
+
+  .progress-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .pbar {
+    height: 3px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+  }
+  .pfill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.8), #ffb067);
+  }
+  .times {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10.5px;
+    color: var(--faint);
+  }
+
+  /* ── Спокойный экран без музыки ── */
   .quiet {
+    flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    height: 100%;
-    position: relative;
+    gap: 6px;
   }
   .quiet-top {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    gap: 8px;
   }
   .quiet-date {
-    font-size: 11.5px;
+    font-size: 11px;
     color: var(--muted);
     text-transform: capitalize;
   }
   .status-pill {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    padding: 3px 9px;
-    border-radius: 99px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid var(--line);
+    gap: 5px;
+    font-size: 10.5px;
     color: var(--muted);
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
   .big-clock {
-    font-size: 46px;
-    font-weight: 600;
-    letter-spacing: -0.04em;
+    font-size: 38px;
+    font-weight: 650;
     line-height: 1;
-    background: linear-gradient(135deg, #ffffff 25%, rgba(160, 228, 255, 0.92) 70%, rgba(var(--accent-rgb), 0.9) 105%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 6px 18px rgba(var(--accent-rgb), 0.2));
+    letter-spacing: -0.04em;
+    color: var(--text);
   }
   .quiet-sub {
     margin: 0;
-    font-size: 12px;
-    line-height: 1.45;
+    font-size: 11.5px;
+    line-height: 1.38;
+    color: var(--faint);
+  }
+  .quiet-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .qchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 99px;
+    font-size: 10.5px;
     color: var(--muted);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .qchip b {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .qchip-btn:hover {
+    color: var(--text);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  .qchip.ok {
+    color: var(--ok);
+    border-color: rgba(126, 232, 162, 0.35);
+    background: rgba(126, 232, 162, 0.1);
+  }
+  .qchip.ok b {
+    color: var(--ok);
   }
 
+  /* ── Левый низ: Разделённый виджет погоды ── */
+  .wx-row {
+    flex: 0.92;
+    display: flex;
+    gap: 10px;
+    min-height: 0;
+  }
+  .wx-main-card {
+    flex: 0.95;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 10px 13px;
+  }
+  .wx-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .wx-ico {
+    font-size: 24px;
+    line-height: 1;
+  }
+  .wx-big-temp {
+    font-size: 26px;
+    font-weight: 650;
+    line-height: 1;
+    color: var(--text);
+  }
+  .wx-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 2px;
+  }
+  .wx-cond {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .wx-detail-card {
+    flex: 1.15;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 9px 12px;
+    gap: 5px;
+  }
+  .wx-dhead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .wx-city-btn {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .wx-city-btn:hover {
+    color: rgb(var(--accent-rgb));
+  }
+  .wx-ref {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .wx-ref:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .wx-drows {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 10.5px;
+  }
+  .wx-drow {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+  }
+  .wx-drow b {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .wx-edit-card,
+  .wx-empty-card {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .wx-city-form {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+  }
+  .wx-input {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(15, 17, 22, 0.7);
+    font-size: 12px;
+    outline: none;
+  }
+  .wx-act,
+  .wx-load {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 11.5px;
+    color: var(--text);
+  }
+  .wx-act:hover,
+  .wx-load:hover {
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  /* ── Правая колонка ── */
   .side {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
     min-height: 0;
     min-width: 0;
   }
-  .vol-card,
-  .recent {
-    padding: 11px 13px;
-    min-width: 0;
-  }
-  .qa-row {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
+
+  /* 1) Пилюля громкости с янтарным градиентом */
+  .vol-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 13px;
     flex: none;
   }
-  .qbtn {
-    height: 52px;
-    padding: 5px 4px;
-    border-radius: 14px;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--line);
-    box-shadow: var(--surface-sheen);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--muted);
-    transition: transform 220ms var(--ease-spring), border-color 160ms var(--ease), color 160ms var(--ease), background 160ms var(--ease), box-shadow 180ms var(--ease);
-  }
-  .qbadge {
-    width: 26px;
-    height: 26px;
+  .mute-btn {
+    width: 28px;
+    height: 28px;
     border-radius: 9px;
     display: grid;
     place-items: center;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    transition: transform 240ms var(--ease-spring), background 160ms var(--ease), box-shadow 160ms var(--ease);
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.05);
+    flex: none;
   }
-  .qa-amber .qbadge {
-    color: #ffb36b;
-    background: rgba(255, 159, 67, 0.16);
-    border-color: rgba(255, 159, 67, 0.34);
+  .mute-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
   }
-  .qa-cyan .qbadge {
-    color: #7ee2ff;
-    background: rgba(86, 204, 242, 0.16);
-    border-color: rgba(86, 204, 242, 0.34);
+  .mute-btn.muted {
+    color: var(--danger);
   }
-  .qa-violet .qbadge {
-    color: #c59cff;
-    background: rgba(176, 132, 255, 0.16);
-    border-color: rgba(176, 132, 255, 0.34);
+  .slider {
+    flex: 1;
+    min-width: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 14px;
+    border-radius: 999px;
+    background: linear-gradient(
+      to right,
+      rgb(var(--accent-rgb)) 0%,
+      #ffb067 var(--vol-pct, 50%),
+      rgba(255, 255, 255, 0.08) var(--vol-pct, 50%)
+    );
+    outline: none;
+    cursor: pointer;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
   }
-  .qa-mint .qbadge {
-    color: #7ef0ae;
-    background: rgba(126, 232, 162, 0.16);
-    border-color: rgba(126, 232, 162, 0.34);
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+    border: 1.5px solid rgba(var(--accent-rgb), 0.7);
+    transition: transform 140ms var(--ease-spring);
+  }
+  .slider:hover::-webkit-slider-thumb {
+    transform: scale(1.12);
+  }
+  .val {
+    font-size: 11px;
+    color: var(--muted);
+    min-width: 34px;
+    text-align: right;
+  }
+
+  /* 2) Сетка 2x2 быстрых кнопок-пилюль */
+  .qa-card {
+    padding: 9px 10px;
+    flex: none;
+  }
+  .qa-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .qbtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
   }
   .qbtn:hover {
-    transform: translateY(-2px);
-    color: var(--text);
-    background: var(--glass-bg-strong);
-    border-color: var(--line-2);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.28);
-  }
-  .qbtn:hover .qbadge {
-    transform: scale(1.14) rotate(-6deg);
+    background: rgba(255, 255, 255, 0.11);
+    border-color: rgba(255, 255, 255, 0.2);
   }
   .qbtn.warn {
-    color: var(--danger);
-    border-color: rgba(255, 107, 107, 0.42);
+    color: #ff9c9c;
+    border-color: rgba(255, 107, 107, 0.38);
     background: rgba(255, 107, 107, 0.12);
   }
-  .qbtn.warn .qbadge {
-    color: var(--danger);
-    background: rgba(255, 107, 107, 0.18);
-    border-color: rgba(255, 107, 107, 0.4);
+
+  /* 3) Буфер обмена */
+  .recent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 13px;
   }
   .card-h {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 12px;
+    font-size: 11.5px;
+    font-weight: 550;
     color: var(--muted);
-    margin-bottom: 10px;
-  }
-  .val {
-    color: var(--text);
-    font-weight: 600;
-  }
-  .vol-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .mute-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    display: grid;
-    place-items: center;
-    background: rgba(255, 255, 255, 0.09);
-    border: 1px solid var(--line);
-    color: var(--text);
-    flex: none;
-  }
-  .mute-btn:hover {
-    background: var(--glass-bg-strong);
-    border-color: var(--line-2);
-  }
-  .mute-btn.muted {
-    color: var(--danger);
-    border-color: rgba(255, 107, 107, 0.4);
-  }
-  .slider {
-    flex: 1;
-    appearance: none;
-    -webkit-appearance: none;
-    cursor: pointer;
-    height: 7px;
-    border-radius: 99px;
-    background: linear-gradient(
-      90deg,
-      rgba(130, 225, 255, 0.9) 0%,
-      rgb(var(--accent-rgb)) var(--vol-pct, 50%),
-      rgba(255, 255, 255, 0.14) var(--vol-pct, 50%),
-      rgba(255, 255, 255, 0.14) 100%
-    );
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    outline: none;
-  }
-  .slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid rgb(var(--accent-rgb));
-    box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.65);
-    transition: transform 150ms var(--ease-spring);
-  }
-  .slider:hover::-webkit-slider-thumb {
-    transform: scale(1.18);
-  }
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 12px;
-  }
-  .chip {
-    font-size: 11px;
-    padding: 4px 8px;
-    border-radius: 8px;
-    background: var(--ink-3);
-    color: var(--muted);
-    display: inline-flex;
-    gap: 5px;
-    align-items: center;
-  }
-  .chip b {
-    color: var(--text);
-    font-weight: 600;
-  }
-  .chip.ok b {
-    color: var(--ok);
-  }
-  .chip.warn {
-    background: rgba(255, 200, 87, 0.14);
-    color: var(--warn);
-  }
-  .chip-btn {
-    border: 1px solid var(--line);
-    transition: border-color 140ms var(--ease), background 140ms var(--ease);
-  }
-  .chip-btn:hover {
-    border-color: rgba(var(--accent-rgb), 0.45);
-    background: var(--ink-4);
-  }
-  .chip-btn.ok {
-    border-color: rgba(74, 214, 152, 0.35);
-    background: rgba(74, 214, 152, 0.1);
-  }
-
-  .recent {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
   }
   .link {
-    font-size: 11.5px;
-    color: rgb(var(--accent-rgb));
+    font-size: 11px;
+    color: var(--faint);
   }
   .link:hover {
-    text-decoration: underline;
+    color: var(--text);
   }
   .empty-clips {
-    font-size: 12px;
+    flex: 1;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    font-size: 11.5px;
     color: var(--faint);
-    line-height: 1.45;
-    margin: auto 0;
+    padding: 0 8px;
   }
   .clip-mini-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    min-width: 0;
+    gap: 4px;
+    min-height: 0;
+    overflow: hidden;
   }
   .clip-row {
     display: flex;
     align-items: center;
     gap: 5px;
     min-width: 0;
-    width: 100%;
   }
   .clip-mini {
     flex: 1;
     min-width: 0;
-    max-width: 100%;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 7px 10px;
-    border-radius: var(--r-s);
-    background: rgba(255, 255, 255, 0.055);
-    border: 1px solid var(--line);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    padding: 6px 9px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid transparent;
     text-align: left;
-    overflow: hidden;
-    transition: border-color 140ms var(--ease), background 140ms var(--ease), transform 140ms var(--ease);
+    transition: background 140ms var(--ease), border-color 140ms var(--ease);
+  }
+  .clip-mini.first {
+    background: rgba(255, 255, 255, 0.075);
+    border-color: rgba(255, 255, 255, 0.08);
   }
   .clip-mini:hover {
-    border-color: rgba(var(--accent-rgb), 0.42);
-    background: var(--glass-bg-strong);
-    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.11);
+    border-color: rgba(255, 255, 255, 0.16);
   }
   .clip-ic {
     color: var(--muted);
@@ -1002,181 +1037,33 @@
     flex: none;
   }
   .mini-thumb {
-    width: 22px;
-    height: 22px;
-    border-radius: 5px;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
     object-fit: cover;
     flex: none;
-    border: 1px solid var(--line);
   }
   .clip-txt {
     flex: 1;
     min-width: 0;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 12px;
+    font-size: 11.5px;
+    color: var(--text);
   }
   .clip-ed {
-    width: 30px;
-    height: 30px;
-    border-radius: 9px;
-    background: var(--ink-3);
-    border: 1px solid var(--line);
-    color: var(--muted);
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
     display: grid;
     place-items: center;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.05);
     flex: none;
-    transition: color 140ms var(--ease), border-color 140ms var(--ease), background 140ms var(--ease);
   }
   .clip-ed:hover {
-    color: rgb(var(--accent-rgb));
-    border-color: rgba(var(--accent-rgb), 0.5);
-    background: rgba(var(--accent-rgb), 0.12);
-  }
-
-  .wx-mini,
-  .wx-card {
-    border-radius: var(--r-s);
-    background: rgba(255, 255, 255, 0.055);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--line);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
-    padding: 8px 10px;
-  }
-  .wx-mini {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: auto;
-  }
-  .wx-mini-left {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-  }
-  .wx-ico {
-    font-size: 14px;
-    line-height: 1;
-  }
-  .wx-temp {
-    font-size: 13px;
-    font-weight: 600;
     color: var(--text);
-  }
-  .wx-desc {
-    font-size: 11.5px;
-    color: var(--muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .wx-mini-right,
-  .wx-actions {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    flex: none;
-  }
-  .wx-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  .wx-main {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-  }
-  .wx-big-ico {
-    font-size: 26px;
-    line-height: 1;
-    display: inline-block;
-    animation: kaplaFloat 3.4s ease-in-out infinite;
-    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
-  }
-  .wx-temp-row {
-    display: flex;
-    align-items: baseline;
-    gap: 7px;
-  }
-  .wx-big-temp {
-    font-size: 21px;
-    font-weight: 600;
-    line-height: 1;
-    background: linear-gradient(135deg, #fff 30%, rgba(130, 225, 255, 0.95) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .wx-cond {
-    font-size: 12px;
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .wx-sub {
-    margin-top: 3px;
-    font-size: 10.5px;
-    color: var(--muted);
-  }
-  .wx-city-btn,
-  .wx-ref,
-  .wx-load,
-  .wx-act {
-    height: 24px;
-    padding: 0 8px;
-    border-radius: 7px;
-    background: var(--ink-4);
-    border: 1px solid var(--line);
-    font-size: 11px;
-    color: var(--muted);
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .wx-ref {
-    width: 24px;
-    padding: 0;
-    justify-content: center;
-  }
-  .wx-city-btn:hover,
-  .wx-ref:hover,
-  .wx-load:hover,
-  .wx-act:hover {
-    color: var(--text);
-    border-color: rgba(var(--accent-rgb), 0.45);
-  }
-  .wx-city-form {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-  }
-  .wx-input {
-    flex: 1;
-    min-width: 0;
-    height: 26px;
-    padding: 0 8px;
-    border-radius: 7px;
-    background: var(--ink-2);
-    border: 1px solid var(--line-2);
-    font-size: 11.5px;
-    color: var(--text);
-    outline: none;
-  }
-  .wx-input:focus {
-    border-color: rgba(var(--accent-rgb), 0.65);
-  }
-  .wx-empty {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    background: rgba(255, 255, 255, 0.14);
   }
 </style>

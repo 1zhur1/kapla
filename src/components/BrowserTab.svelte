@@ -232,12 +232,12 @@
     gap: 5px;
   }
   .pchip {
-    padding: 4px 10px;
-    border-radius: 9px;
+    padding: 5px 12px;
+    border-radius: 999px;
     background: var(--glass-bg);
     backdrop-filter: var(--glass-blur);
     border: 1px solid var(--line);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
     font-size: 11.5px;
     font-weight: 500;
     color: var(--muted);
@@ -249,9 +249,9 @@
     background: var(--glass-bg-strong);
   }
   .pchip.active {
-    background: rgba(var(--accent-rgb), 0.18);
-    border-color: rgba(var(--accent-rgb), 0.52);
-    color: rgb(var(--accent-rgb));
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: var(--text);
   }
   .nav-btns {
     display: flex;
@@ -281,12 +281,12 @@
     align-items: center;
     gap: 8px;
     height: 32px;
-    padding: 0 4px 0 10px;
-    border-radius: var(--r-s);
+    padding: 0 5px 0 12px;
+    border-radius: 999px;
     background: var(--glass-bg);
     backdrop-filter: var(--glass-blur);
     border: 1px solid var(--line);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
     color: var(--muted);
   }
   .addr-row:focus-within {

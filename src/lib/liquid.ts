@@ -299,72 +299,56 @@ export class Liquid {
       this.edgePts.push([px, h + this.edge(px, x0 + r, span)]);
     }
 
-    // Ореол кристальной глубины под формой
+    // Ореол тёплого янтарного свечения вдоль нижней грани (как на hero-preview)
     const g = this.glow.x;
-    const auraStrength = Math.max(g, this.open ? 0.56 : 0.24);
+    const auraStrength = Math.max(g, this.open ? 0.62 : 0.26);
     if (auraStrength > 0.02) {
-      const aura = ctx.createRadialGradient(cx, h, Math.max(10, w * 0.1), cx, h + 16, w * 0.58);
-      aura.addColorStop(0, `rgba(${ar},${ag},${ab},${0.28 * auraStrength})`);
-      aura.addColorStop(0.45, `rgba(110, 195, 255, ${0.12 * auraStrength})`);
+      const aura = ctx.createRadialGradient(cx, h + 2, Math.max(12, w * 0.08), cx, h + 14, w * 0.52);
+      aura.addColorStop(0, `rgba(${ar},${ag},${ab},${0.32 * auraStrength})`);
+      aura.addColorStop(0.5, `rgba(${ar},${ag},${ab},${0.1 * auraStrength})`);
       aura.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = aura;
       ctx.fillRect(Math.max(0, x0 - 24), Math.max(0, h - 22), w + 48, 66);
     }
 
-    // Глубокий дымчатый графит (Smoked Titanium Glass)
+    // Глубокий угольно-матовый корпус (Obsidian Matte Glass)
     this.traceBody(ctx, x0, x1, h, r, s);
-    const fill = ctx.createLinearGradient(x0, 0, x1, h + 10);
-    fill.addColorStop(0, this.open ? "rgba(15, 18, 26, 0.72)" : "rgba(13, 16, 23, 0.76)");
-    fill.addColorStop(0.55, this.open ? "rgba(11, 13, 20, 0.78)" : "rgba(10, 12, 18, 0.80)");
-    fill.addColorStop(1, this.open ? "rgba(8, 10, 15, 0.82)" : "rgba(8, 10, 15, 0.84)");
+    const fill = ctx.createLinearGradient(x0, 0, x0, h + 6);
+    fill.addColorStop(0, this.open ? "rgba(25, 27, 33, 0.88)" : "rgba(22, 24, 30, 0.9)");
+    fill.addColorStop(0.65, this.open ? "rgba(19, 21, 27, 0.9)" : "rgba(17, 19, 24, 0.92)");
+    fill.addColorStop(1, this.open ? "rgba(15, 17, 22, 0.93)" : "rgba(14, 16, 20, 0.94)");
     ctx.fillStyle = fill;
     ctx.fill();
 
-    // Внутренняя глубина: сдержанный акцент + холодный платиновый блик
+    // Внутренний свет: мягкий нижний тёплый отсвет и деликатный блик курсора
     ctx.save();
     this.traceBody(ctx, x0, x1, h, r, s);
     ctx.clip();
 
     const t = this.t;
-    const cursorBiasX = this.cursor.near ? clamp((this.cursor.x - cx) * 0.25, -80, 80) : 0;
+    const cursorBiasX = this.cursor.near ? clamp((this.cursor.x - cx) * 0.2, -70, 70) : 0;
 
-    // 1) Сдержанная сфера акцента (реагирует на музыку и курсор)
-    const orb1X = cx - w * 0.24 + Math.sin(t * 0.55) * (this.open ? 42 : 18) + cursorBiasX * 0.6;
-    const orb1Y = h * (this.open ? 0.32 : 0.45) + Math.cos(t * 0.48) * (this.open ? 24 : 6);
-    const orb1R = Math.max(w * 0.44, 130);
-    const g1 = ctx.createRadialGradient(orb1X, orb1Y, 4, orb1X, orb1Y, orb1R);
-    g1.addColorStop(0, `rgba(${ar}, ${ag}, ${ab}, ${this.open ? 0.16 : 0.18 + g * 0.18})`);
-    g1.addColorStop(0.6, `rgba(${ar}, ${ag}, ${ab}, 0.04)`);
-    g1.addColorStop(1, `rgba(${ar}, ${ag}, ${ab}, 0)`);
-    ctx.fillStyle = g1;
+    // Тёплое янтарное свечение от нижней кромки внутрь
+    const botGlow = ctx.createRadialGradient(cx + cursorBiasX * 0.25, h + 8, 8, cx, h, w * 0.48);
+    botGlow.addColorStop(0, `rgba(${ar}, ${ag}, ${ab}, ${this.open ? 0.16 : 0.14 + g * 0.18})`);
+    botGlow.addColorStop(0.55, `rgba(${ar}, ${ag}, ${ab}, 0.04)`);
+    botGlow.addColorStop(1, `rgba(${ar}, ${ag}, ${ab}, 0)`);
+    ctx.fillStyle = botGlow;
     ctx.fillRect(x0 - s, 0, w + s * 2, h + 14);
 
-    // 2) Холодное платиновое преломление справа
-    const orb2X = cx + w * 0.26 + Math.cos(t * 0.45) * (this.open ? 46 : 20) - cursorBiasX * 0.35;
-    const orb2Y = h * (this.open ? 0.65 : 0.5) + Math.sin(t * 0.6) * (this.open ? 22 : 5);
-    const orb2R = Math.max(w * 0.42, 120);
-    const g2 = ctx.createRadialGradient(orb2X, orb2Y, 4, orb2X, orb2Y, orb2R);
-    g2.addColorStop(0, `rgba(215, 226, 248, ${this.open ? 0.1 : 0.08})`);
-    g2.addColorStop(0.65, "rgba(215, 226, 248, 0.025)");
-    g2.addColorStop(1, "rgba(215, 226, 248, 0)");
-    ctx.fillStyle = g2;
-    ctx.fillRect(x0 - s, 0, w + s * 2, h + 14);
-
-    // Верхний глянцевый срез «линзы»
-    const sheen = ctx.createLinearGradient(x0, 0, x0 + w * 0.36, h * 0.52);
-    sheen.addColorStop(0, "rgba(255, 255, 255, 0.16)");
-    sheen.addColorStop(0.28, "rgba(255, 255, 255, 0.045)");
+    // Мягкий верхний срез стекла
+    const sheen = ctx.createLinearGradient(x0, 0, x0, h * 0.36);
+    sheen.addColorStop(0, "rgba(255, 255, 255, 0.09)");
     sheen.addColorStop(1, "rgba(255, 255, 255, 0)");
     ctx.fillStyle = sheen;
     ctx.fillRect(x0 - s, 0, w + s * 2, h + 12);
 
-    // Следящий за курсором прожектор блика
+    // Следящий за курсором деликатный блик
     if (this.cursor.near) {
       const mx = clamp(this.cursor.x, x0, x1);
       const my = clamp(this.cursor.y, 0, h);
-      const spot = ctx.createRadialGradient(mx, my, 2, mx, my, this.open ? 140 : 70);
-      spot.addColorStop(0, "rgba(255, 255, 255, 0.11)");
-      spot.addColorStop(0.5, `rgba(${ar},${ag},${ab},0.04)`);
+      const spot = ctx.createRadialGradient(mx, my, 2, mx, my, this.open ? 130 : 65);
+      spot.addColorStop(0, "rgba(255, 255, 255, 0.07)");
       spot.addColorStop(1, "rgba(255, 255, 255, 0)");
       ctx.fillStyle = spot;
       ctx.fillRect(x0 - s, 0, w + s * 2, h + 12);
@@ -373,60 +357,46 @@ export class Liquid {
     // Сдержанные кольца ряби при действиях
     for (let i = 0; i < this.ripples.length; i++) {
       const rp = this.ripples[i];
-      const a = clamp(rp.life * 0.38, 0, 0.42);
+      const a = clamp(rp.life * 0.34, 0, 0.38);
       ctx.beginPath();
       ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${a * 0.65})`;
-      ctx.lineWidth = 1.25;
+      ctx.strokeStyle = `rgba(255, 255, 255, ${a * 0.55})`;
+      ctx.lineWidth = 1.2;
       ctx.stroke();
 
       ctx.beginPath();
       ctx.arc(rp.x, rp.y, rp.r * 0.72, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(${ar},${ag},${ab}, ${a * 0.55})`;
+      ctx.strokeStyle = `rgba(${ar},${ag},${ab}, ${a * 0.5})`;
       ctx.lineWidth = 1;
       ctx.stroke();
     }
     ctx.restore();
 
-    // Строгая титаново-стеклянная кромка с мягким акцентом
+    // Чёткая платиновая окантовка корпуса (как на hero-preview)
     this.traceBody(ctx, x0, x1, h, r, s);
-    const prism = ctx.createLinearGradient(x0, 0, x1, h);
-    prism.addColorStop(0, "rgba(255, 255, 255, 0.28)");
-    prism.addColorStop(0.35, "rgba(255, 255, 255, 0.14)");
-    prism.addColorStop(0.7, `rgba(${ar}, ${ag}, ${ab}, 0.22)`);
-    prism.addColorStop(1, "rgba(255, 255, 255, 0.2)");
-    ctx.strokeStyle = prism;
-    ctx.lineWidth = 1.25;
+    const borderGrad = ctx.createLinearGradient(x0, 0, x0, h);
+    borderGrad.addColorStop(0, "rgba(255, 255, 255, 0.32)");
+    borderGrad.addColorStop(0.6, "rgba(255, 255, 255, 0.2)");
+    borderGrad.addColorStop(1, "rgba(255, 255, 255, 0.28)");
+    ctx.strokeStyle = borderGrad;
+    ctx.lineWidth = 1.35;
     ctx.stroke();
 
-    // Плавный световой луч по кромке (без радуги — платина + акцент)
-    const haloA = clamp((this.open ? 0.26 : 0) + this.flareV * 0.65, 0, 0.9);
-    if (haloA > 0.02 && typeof ctx.createConicGradient === "function") {
-      const halo = ctx.createConicGradient(t * 0.65, cx, h * 0.5);
-      halo.addColorStop(0, "rgba(255, 255, 255, 0.85)");
-      halo.addColorStop(0.18, `rgba(${ar}, ${ag}, ${ab}, 0.75)`);
-      halo.addColorStop(0.38, "rgba(255, 255, 255, 0.08)");
-      halo.addColorStop(0.65, "rgba(255, 255, 255, 0.05)");
-      halo.addColorStop(0.85, "rgba(215, 226, 248, 0.45)");
-      halo.addColorStop(1, "rgba(255, 255, 255, 0.85)");
+    // Вспышка кромки только в момент уведомления/открытия
+    if (this.flareV > 0.04) {
       this.traceBody(ctx, x0, x1, h, r, s, false);
-      ctx.strokeStyle = halo;
-      ctx.globalAlpha = haloA * 0.25;
-      ctx.lineWidth = 6;
+      ctx.strokeStyle = `rgba(${ar}, ${ag}, ${ab}, ${clamp(this.flareV * 0.55, 0, 0.6)})`;
+      ctx.lineWidth = 2.2;
       ctx.stroke();
-      ctx.globalAlpha = haloA * 0.9;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.globalAlpha = 1;
     }
 
-    // Мениск — чистый блик вдоль нижнего края
-    const intensity = clamp(0.28 + this.bumpA.x * 0.045 + this.wave.x * 0.16 + g * 0.24, 0, 0.85);
+    // Мениск — тёплый янтарный блик по центру нижней грани
+    const intensity = clamp(0.32 + this.bumpA.x * 0.045 + this.wave.x * 0.16 + g * 0.28, 0, 0.9);
     const rim = ctx.createLinearGradient(x0, 0, x1, 0);
-    rim.addColorStop(0, "rgba(255, 255, 255, 0)");
-    rim.addColorStop(0.28, `rgba(255, 255, 255, ${intensity * 0.42})`);
-    rim.addColorStop(0.5, `rgba(255, 255, 255, ${Math.min(0.85, intensity + 0.12)})`);
-    rim.addColorStop(0.74, `rgba(${ar},${ag},${ab},${intensity * 0.75})`);
+    rim.addColorStop(0, `rgba(${ar},${ag},${ab},0)`);
+    rim.addColorStop(0.28, `rgba(${ar},${ag},${ab},${intensity * 0.55})`);
+    rim.addColorStop(0.5, `rgba(255, 210, 175, ${Math.min(0.88, intensity + 0.12)})`);
+    rim.addColorStop(0.72, `rgba(${ar},${ag},${ab},${intensity * 0.55})`);
     rim.addColorStop(1, `rgba(${ar},${ag},${ab},0)`);
     ctx.beginPath();
     for (let i = 0; i < this.edgePts.length; i++) {
